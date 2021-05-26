@@ -97,7 +97,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler {
             if (isChromeCustomTabsSupported()) {
                 customTabsIntent.launchUrl(activity, uri);
                 result.success(1);
-            } else if (isAnyBrowserSupported(uri)) {
+            } else if (isAnyBrowserSupported()) {
                 useDefaultBrowser(uri);
                 result.success(0);
             }
@@ -124,9 +124,10 @@ public class MethodCallHandlerImpl implements MethodCallHandler {
         return resolveInfo != null && !resolveInfo.isEmpty();
     }
 
-    private boolean isAnyBrowserSupported(Uri uri) {
-        // requires uri to determine correct activity that can handle http/s requests :)
-        Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+    private boolean isAnyBrowserSupported() {
+        // Requires uri to determine correct activity that can handle http/s requests. Don't
+        // use passed url since that may match the app itself (deeplink).
+        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://google.de"));
         List<ResolveInfo> resolveInfo = activity.getApplicationContext().getPackageManager().queryIntentActivities(browserIntent, PackageManager.MATCH_ALL);
 
         return resolveInfo != null && !resolveInfo.isEmpty();
