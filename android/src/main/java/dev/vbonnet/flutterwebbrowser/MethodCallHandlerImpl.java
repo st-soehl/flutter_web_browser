@@ -43,14 +43,13 @@ public class MethodCallHandlerImpl implements MethodCallHandler {
                 break;
         }
     }
-  
+
     /**
-     * 
-     * @param call Method call
-     * @param result Returns wrapper; 
-     *               Codes:    -1   -> No browser on device, do nothing
-     *                          0   -> No implementation of custom tabs available, show picker with other options/browsers
-     *                          1   -> Custom Tab impl. found, call launchUrl as before      
+     * @param call   Method call
+     * @param result Returns result wrapper, wrapping status codes -1, 0 or 1.
+     *               -1   -> No browser on device, do nothing
+     *               0   -> No implementation of custom tabs available, show picker
+     *               1   -> Custom Tab impl. found, call launchUrl as before
      */
     private void openUrl(MethodCall call, Result result) {
         if (activity == null) {
@@ -93,17 +92,19 @@ public class MethodCallHandlerImpl implements MethodCallHandler {
 
         CustomTabsIntent customTabsIntent = builder.build();
         customTabsIntent.intent.setPackage(getPackageName());
-
-        if (isChromeCustomTabsSupported()) {
-            customTabsIntent.launchUrl(activity, Uri.parse(url));
-            result.success(1);
-        } else if (isAnyBrowserSupported()) {
-            useDefaultBrowser(url);
-            result.success(0);
-        } else {
-            // do nothing, return error code -1
-            result.success(-1);
+        if (url != null) {
+            Uri uri = Uri.parse(url);
+            if (isChromeCustomTabsSupported()) {
+                customTabsIntent.launchUrl(activity, uri);
+                result.success(1);
+            } else if (isAnyBrowserSupported(uri)) {
+                useDefaultBrowser(uri);
+                result.success(0);
+            }
         }
+
+        // do nothing, return error code -1
+        result.success(-1);
     }
 
     private void warmup(Result result) {
@@ -123,23 +124,24 @@ public class MethodCallHandlerImpl implements MethodCallHandler {
         return resolveInfo != null && !resolveInfo.isEmpty();
     }
 
-    private boolean isAnyBrowserSupported() {
-        Intent browserIntent = new Intent(Intent.ACTION_VIEW);
-        ResolveInfo resolveInfo = activity.getApplicationContext().getPackageManager().resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY);
+    private boolean isAnyBrowserSupported(Uri uri) {
+        // requires uri to determine correct activity that can handle http/s requests :)
+        Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+        List<ResolveInfo> resolveInfo = activity.getApplicationContext().getPackageManager().queryIntentActivities(browserIntent, PackageManager.MATCH_ALL);
 
-        return resolveInfo != null && resolveInfo.activityInfo != null;
+        return resolveInfo != null && !resolveInfo.isEmpty();
     }
 
     // Use default browser instead of triggering chooser so that we don't get into
     // a loop where the current app will forever try to open the URL because it
     // was once set as the preferred app for URLs
-    private void useDefaultBrowser(String url) {
+    private void useDefaultBrowser(Uri uri) {
         Intent defaultBrowser = Intent.makeMainSelectorActivity(
                 Intent.ACTION_MAIN,
                 Intent.CATEGORY_APP_BROWSER
         );
 
-        defaultBrowser.setData(Uri.parse(url));
+        defaultBrowser.setData(uri);
         activity.startActivity(defaultBrowser);
     }
 }
