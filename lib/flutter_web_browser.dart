@@ -70,7 +70,9 @@ class FlutterWebBrowser {
     return await _channel.invokeMethod<bool>('warmup') ?? true;
   }
 
-  static Future<void> openWebPage({
+  
+  
+  static Future<OpenPageResult> openWebPage({
     required String url,
     CustomTabsOptions customTabsOptions = const CustomTabsOptions(),
     SafariViewControllerOptions safariVCOptions =
@@ -100,6 +102,18 @@ class FlutterWebBrowser {
             safariVCOptions.modalPresentationCapturesStatusBarAppearance,
         'dismissButtonStyle': safariVCOptions.dismissButtonStyle?.index,
       },
+    }).then((value) {
+      if (value == 1){
+        return OpenPageResult.opened_custom_tab;
+      }else if(value == 0){
+        return OpenPageResult.opened_via_default_browser;
+      }else{
+        return OpenPageResult.no_broswer_available;
+      }
     });
   }
+}
+
+enum OpenPageResult{
+  opened_custom_tab, opened_via_default_browser, no_broswer_available
 }
